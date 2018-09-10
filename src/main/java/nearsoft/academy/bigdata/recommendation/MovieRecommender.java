@@ -1,7 +1,7 @@
 package nearsoft.academy.bigdata.recommendation;
 
 
-import com.sun.org.apache.bcel.internal.generic.RET;
+//import com.sun.org.apache.bcel.internal.generic.RET;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.impl.neighborhood.ThresholdUserNeighborhood;
@@ -9,45 +9,47 @@ import org.apache.mahout.cf.taste.impl.recommender.GenericUserBasedRecommender;
 import org.apache.mahout.cf.taste.impl.similarity.PearsonCorrelationSimilarity;
 import org.apache.mahout.cf.taste.model.DataModel;
 import org.apache.mahout.cf.taste.neighborhood.UserNeighborhood;
+import org.apache.mahout.cf.taste.recommender.RecommendedItem;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
 import static javax.imageio.ImageIO.getCacheDirectory;
 
-
 public class MovieRecommender {
 
-    //private final GenericUserBasedRecommender recommender;
+    private final GenericUserBasedRecommender recommender;
     private String source;
     private HashMap<String, Integer> products = new HashMap<>();
     private HashMap<String, Integer> users = new HashMap<>();
+    private int totalReviews = 0;
 
-
-
-    MovieRecommender(String source) throws IOException, TasteException {
-
-        this.source = source;
-        //DataModel model = new FileDataModel(new File(generateCvs()));
-        //UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
-        //UserNeighborhood neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
-        //recommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
-    }
-
-
+    /*
     public static void main(String[] args) {
-        MovieRecommender recommender = null;
+
         try {
-            recommender = new MovieRecommender("tinyMovies.txt");
+            MovieRecommender reocomendation = new MovieRecommender("movies.txt");
+
+            reocomendation.getRecommendationsForUser("A141HP4LYPWMSR");
+
         } catch (IOException e) {
             e.printStackTrace();
         } catch (TasteException e) {
             e.printStackTrace();
         }
-        recommender.generateCvs();
+    }
+    */
+
+    MovieRecommender(String source) throws IOException, TasteException {
+        this.source = source;
+        DataModel model = new FileDataModel(new File(generateCvs()));
+        UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
+        UserNeighborhood neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
+        recommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
     }
 
     private String generateCvs(){
@@ -59,7 +61,7 @@ public class MovieRecommender {
         ClassLoader classLoader = getClass().getClassLoader();
         String productId = null, userId = null, score = null;
         String line;
-        int count = 0, product = 0, user = 0;
+        int product = 0, user = 0;
         boolean reading = false, face2 = false, store = false;
 
         try{
@@ -118,45 +120,26 @@ public class MovieRecommender {
                 }
 
                 if(store){
-
-                    String x = String.valueOf(product);
-                    String y = String.valueOf(user);
-
-                    writer.append(x);
-                    writer.append(",");
-                    writer.append(y);
-                    writer.append(",");
-                    writer.append(score);
-                    writer.append("\n");
-
-
-                    //writer.write("-"); //this line is here just because there is a bug and idk why but this fix it
-                   // writer.write(product+","+user+","+score+"\n");
-                    writer.write(x+"-"+y+"\n");
-                    //writer.write(product+","+user+"\n");
-
-
-
-                    count++;
+                    writer.write(user+","+product+","+score+"\n");
+                    totalReviews++;
                     reading = false;
                     face2 = false;
                     store =false;
-                    System.out.println(product+","+user+","+score);
                 }
             }
-
+            writer.close();
             long endTime = System.currentTimeMillis();
-            System.out.println(csv.getAbsolutePath());
-            System.out.println("That took " + (endTime - startTime) + " milliseconds");
-            return csv.getAbsolutePath();
+            //path to the generated csv
+            //System.out.println(csv.getAbsolutePath());
 
+            System.out.println("creating the csv file took: " + (endTime - startTime) + " milliseconds");
+            return csv.getAbsolutePath();
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
             return "";
     }
 
@@ -164,20 +147,35 @@ public class MovieRecommender {
         return line.substring(line.indexOf(" ") + 1);
     }
 
-
     public int getTotalReviews() {
-        return 1;
+        return totalReviews;
     }
 
     public int getTotalProducts() {
-        return 1;
+        return products.size();
     }
 
     public int getTotalUsers() {
-        return 1;
+        return users.size();
     }
 
-    public List<String> getRecommendationsForUser(String a141HP4LYPWMSR) {
-        return null;
+    public List<String> getRecommendationsForUser(String userId) throws TasteException {
+
+        List<String> recomendedMovies = new ArrayList<>();
+
+        List<RecommendedItem> recommendations = recommender.recommend(users.get(userId), 3);
+
+        for (RecommendedItem recommendation : recommendations) {
+            System.out.println(recommendation.getItemID());
+
+            for(Map.Entry<String, Integer> entry : products.entrySet()){
+                if(entry.getValue() == recommendation.getItemID()) {
+                    System.out.println(entry);
+                    recomendedMovies.add(entry.getKey());
+                }
+            }
+        }
+
+        return recomendedMovies;
     }
 }
